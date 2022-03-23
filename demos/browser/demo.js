@@ -13,6 +13,28 @@ var chunkInput      = document.querySelector('#chunksize')
 var parallelInput   = document.querySelector('#paralleluploads')
 var endpointInput   = document.querySelector('#endpoint')
 
+var popQueue   = document.querySelector('#js-pop-queue')
+var listQueue   = document.querySelector('#js-list-queue')
+
+const requestQueue = []
+
+function updateQueueList() {
+  listQueue.innerHTML = ""
+  requestQueue
+    .map(({description}) => {
+      const e = document.createElement('li')
+      e.textContent = description
+      return e
+    })
+    .forEach(e => listQueue.appendChild(e))
+}
+
+popQueue.onclick = () => {
+  const {resolve} = requestQueue.shift()
+  resolve()
+  updateQueueList()
+}
+
 if (!tus.isSupported) {
   alertBox.classList.remove('hidden')
 }
@@ -101,6 +123,15 @@ function startUpload () {
 
       reset()
     },
+    onBeforeRequest (req) {
+      return new Promise((resolve) => {
+        requestQueue.push({
+          resolve,
+          description: `${req.getMethod()} ${req.getURL()}`,
+        })
+        updateQueueList()
+      })
+    }
   }
 
   upload = new tus.Upload(file, options)
